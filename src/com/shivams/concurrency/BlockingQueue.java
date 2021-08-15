@@ -9,7 +9,7 @@ public class BlockingQueue<T> {
     private Integer capacity;
     private Integer currentSize;
 
-    private Object lock = new Object();
+    private final Object lock = new Object();
 
     public BlockingQueue(Integer capacity) {
         this.capacity = capacity;
@@ -30,15 +30,18 @@ public class BlockingQueue<T> {
      * @throws InterruptedException
      */
     public void enqueue(T element) throws InterruptedException {
-        if(currentSize == capacity) {
-            wait();
+        synchronized (lock) {
+            if (currentSize == capacity) {
+                lock.wait();
+            }
+            if (end == capacity) {
+                end = 0;
+            }
+            queue.add(end, element);
+            end++;
+            currentSize++;
+            lock.notifyAll();
         }
-        if(end == capacity) {
-            end = 0;
-        }
-        queue.add(end, element);
-        end++;
-        currentSize++;
     }
 
     /**
@@ -47,14 +50,19 @@ public class BlockingQueue<T> {
      * @throws InterruptedException
      */
     public T dequeue() throws InterruptedException {
-        if(currentSize == 0) {
-            wait();
+        T element = null;
+        synchronized (lock) {
+            if (currentSize == 0) {
+                lock.wait();
+            }
+            if (start == capacity) {
+                start = 0;
+            }
+            element = queue.get(start);
+            start++;
+            currentSize--;
+            lock.notifyAll();
         }
-        if(start == capacity) {
-            start = 0;
-        }
-        T element = queue.get(start);
-        start++;
         return element;
     }
 }
